@@ -1,2 +1,99 @@
-# jrf-task-atlas-repo
-This repository contains all important files, folders, and documentation related to implementation, deployment, and application (of Atals/GeoData, Geo works, satellite data works). It includes end-to-end work, commits, updates, etc.
+# BREATHE Research Atlas
+
+The Research Atlas is a standalone React/Vite microfrontend for exploring approved
+historical facts by location. It is designed to be hosted independently (for example
+with AWS Amplify) and embedded in the BREATHE Archive Lens application.
+
+Current scope is deliberately local/source-only. No AWS resources have been created,
+no Lambda has been deployed, and no production records have been changed. The
+geocoding Lambda source and API contract are ready for deployment after environment,
+IAM, API Gateway, and map resources are configured.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Researcher] --> A[Archive Lens]
+    A -->|verified iframe postMessage| F[Atlas React app]
+    F -->|GET documents and approved facts| D[Existing OCR API]
+    F -->|POST place search| G[Atlas geocoder Lambda]
+    G --> L[Amazon Location place index]
+    L --> G
+    G -->|candidate list; no writes| F
+    F -->|review and confirm| D
+    D --> R[(Existing ExtractedRecords table)]
+    F --> M[Amazon Location map]
+```
+
+Atlas reads approved facts from the existing BREATHE API. Geocoding only returns
+candidates; a researcher explicitly reviews a match before the existing record API
+saves its `geotag` attribute. The current retrieval Lambda change that validates and
+authorizes geotag updates remains part of the BREATHE application repository, not
+this standalone repository; deploy that companion backend change before enabling
+geotag writes.
+
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| `frontend/` | Standalone, responsive React/Vite Atlas app and MapLibre map viewer. |
+| `backend/lambda_geocode.py` | Protected candidate-only Amazon Location text geocoder. |
+| `backend/test_lambda_geocode.py` | Geocoder unit tests. |
+| `backend/README.md` | Lambda contract and deployment requirements. |
+| `frontend/README.md` | Local development, environment, and Amplify setup. |
+| `integration/archive-lens/` | Parent iframe bridge and integration notes. |
+
+## Quick start
+
+```bash
+cd frontend
+npm ci
+cp .env.example .env.local
+npm run dev
+```
+
+When opening Atlas inside Archive Lens, use the parent app's Atlas tab. The signed-in
+token is sent through a source- and origin-checked `postMessage`; it is never placed
+in the URL. The local development app defaults to the parent at `http://localhost:3000`
+if opened directly without an iframe referrer.
+
+See [frontend setup and Amplify configuration](./frontend/README.md) and
+[geocoder Lambda setup](./backend/README.md) and
+[Archive Lens integration](./integration/archive-lens/README.md).
+
+## Data contract
+
+Each existing fact may include multiple additive geotags; original fields and
+`spatial_units` text are preserved:
+
+```json
+{
+  "place_name": "Bidar",
+  "place_type": "district",
+  "label": "Bidar, Karnataka, India",
+  "latitude": 17.9,
+  "longitude": 77.5,
+  "provider": "Amazon Location Service",
+  "place_id": "provider-place-id",
+  "relevance": 0.94,
+  "status": "confirmed",
+  "updated_at": "2025-01-01T00:00:00Z"
+}
+```
+
+Only records with `review_status=approved` are shown. Only geotags with
+`status=confirmed` appear as map markers. Future IMD, land-surface-temperature,
+satellite, and remote-sensing layers should be independent data layers with their own
+timestamps and provenance.
+
+## AWS naming and deployment boundary
+
+Use the `jrf-task-atlas-*` prefix for the Lambda, API, IAM roles, place index, map,
+map API key, and Amplify app. The target region is `ap-southeast-2`. Restrict the
+browser map key to the deployed Atlas origin and map-only operations. Configure the
+Lambda with the protected shared `JWT_SECRET`, current users-table read access, the
+place index name, and the exact Atlas CORS origin.
+
+This repository contains source and configuration examples only. Creating AWS
+resources, deploying Lambda/API, and publishing Amplify are intentionally separate
+steps and have not been performed.

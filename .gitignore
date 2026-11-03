@@ -1,0 +1,15 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+**/.env.local
+
+# JavaScript dependencies/build
+**/node_modules/
+**/dist/
+
+# Python caches and virtual environments
+**/__pycache__/
+*.py[cod]
+**/.venv/
+**/venv/
