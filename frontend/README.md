@@ -13,11 +13,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The parent app is expected on `http://localhost:3000`. Atlas derives the exact parent
-origin from the iframe referrer by default; set `VITE_PARENT_ORIGIN` only when the
-parent suppresses that referrer. The parent Archive Lens app must be configured with
-`REACT_APP_ATLAS_APP_URL=http://localhost:5173` and contain the Atlas iframe
-authentication bridge.
+The parent app is expected on `http://localhost:3000` for local work. Atlas derives
+the exact parent origin from the iframe referrer by default; set `VITE_PARENT_ORIGIN`
+only when the parent suppresses that referrer. The production Atlas app is
+`https://main.d1g1u8rtpgjn48.amplifyapp.com`; the parent Archive Lens app embeds that
+origin and contains the Atlas iframe authentication bridge.
 
 ## Environment
 
@@ -34,9 +34,9 @@ Set these in Amplify's environment configuration for the relevant deployment bra
 Vite embeds `VITE_*` variables in public browser assets. Never place server secrets,
 JWT signing secrets, or AWS credentials in frontend variables. The map API key is
 public by design and must have strict Amazon Location key restrictions.
-The current map key allows only `http://localhost:5173/*`; before production use,
-update it to the exact Amplify origin. The existing OCR API CORS and Atlas API CORS,
-plus the geocoder Lambda's `ALLOWED_ORIGIN`, must also include that origin.
+The map key and backend CORS allow the local origin and the deployed Atlas origin
+`https://main.d1g1u8rtpgjn48.amplifyapp.com`. The geocoder Lambda uses an explicit
+`ALLOWED_ORIGINS` list for those origins.
 
 ## Build
 

@@ -90,9 +90,28 @@ class GeocodeHandlerTests(unittest.TestCase):
         search.assert_not_called()
 
     def test_handles_preflight(self):
-        response = lambda_geocode.lambda_handler({"httpMethod": "OPTIONS"}, None)
+        with patch.object(lambda_geocode, "ALLOWED_ORIGINS", {
+            "http://localhost:5173",
+            "https://main.d1g1u8rtpgjn48.amplifyapp.com",
+        }):
+            response = lambda_geocode.lambda_handler({
+                "httpMethod": "OPTIONS",
+                "headers": {"origin": "https://main.d1g1u8rtpgjn48.amplifyapp.com"},
+            }, None)
         self.assertEqual(response["statusCode"], 204)
         self.assertIn("OPTIONS", response["headers"]["Access-Control-Allow-Methods"])
+        self.assertEqual(
+            response["headers"]["Access-Control-Allow-Origin"],
+            "https://main.d1g1u8rtpgjn48.amplifyapp.com",
+        )
+
+    def test_does_not_allow_unconfigured_origins(self):
+        with patch.object(lambda_geocode, "ALLOWED_ORIGINS", {"http://localhost:5173"}):
+            response = lambda_geocode.lambda_handler({
+                "httpMethod": "OPTIONS",
+                "headers": {"origin": "https://untrusted.example"},
+            }, None)
+        self.assertNotIn("Access-Control-Allow-Origin", response["headers"])
 
     def test_requires_an_atlas_authorized_token(self):
         with (

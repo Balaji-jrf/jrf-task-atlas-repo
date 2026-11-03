@@ -25,19 +25,37 @@ AWS_REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
 PLACE_INDEX_NAME = os.environ.get("ATLAS_PLACE_INDEX_NAME", "jrf-task-atlas-place-index")
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 USERS_TABLE_NAME = os.environ.get("USERS_TABLE", "jrf-task-BreatheUsers")
+ALLOWED_ORIGINS = {
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS",
+        os.environ.get("ALLOWED_ORIGIN", "http://localhost:5173"),
+    ).split(",")
+    if origin.strip()
+}
 location = boto3.client("location", region_name=AWS_REGION)
 users_table = boto3.resource("dynamodb", region_name=AWS_REGION).Table(USERS_TABLE_NAME)
 
 
-def _response(status_code, body=None):
+def _response(status_code, body=None, event=None):
+    headers = {
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
+        "Access-Control-Allow-Headers": "content-type,authorization",
+        "Content-Type": "application/json",
+    }
+    request_headers = (event or {}).get("headers") or {}
+    origin = next(
+        (
+            value for key, value in request_headers.items()
+            if isinstance(key, str) and key.lower() == "origin"
+        ),
+        None,
+    )
+    if origin in ALLOWED_ORIGINS:
+        headers["Access-Control-Allow-Origin"] = origin
     return {
         "statusCode": status_code,
-        "headers": {
-            "Access-Control-Allow-Origin": os.environ.get("ALLOWED_ORIGIN", "*"),
-            "Access-Control-Allow-Methods": "POST,OPTIONS",
-            "Access-Control-Allow-Headers": "content-type,authorization",
-            "Content-Type": "application/json",
-        },
+        "headers": headers,
         "body": json.dumps(body or {}),
     }
 
@@ -115,9 +133,9 @@ def lambda_handler(event, _context):
         or event.get("httpMethod", "POST")
     ).upper()
     if method == "OPTIONS":
-        return _response(204)
+        return _response(204, event=event)
     if method != "POST":
-        return _response(405, {"detail": "Method not allowed"})
+        return _response(405, {"detail": "Method not allowed"}, event)
     authorized, auth_error = _authorized(event)
     if not authorized:
         status_by_error = {
@@ -127,21 +145,21 @@ def lambda_handler(event, _context):
             "Atlas access required": 403,
         }
         status = status_by_error.get(auth_error, 401)
-        return _response(status, {"detail": auth_error})
+        return _response(status, {"detail": auth_error}, event)
     if not PLACE_INDEX_NAME:
         LOGGER.error("ATLAS_PLACE_INDEX_NAME is not configured")
-        return _response(500, {"detail": "Atlas place search is not configured"})
+        return _response(500, {"detail": "Atlas place search is not configured"}, event)
     try:
         body = _request_body(event)
     except (ValueError, json.JSONDecodeError, UnicodeDecodeError, binascii.Error) as error:
-        return _response(400, {"detail": str(error)})
+        return _response(400, {"detail": str(error)}, event)
 
     place_name = body.get("place_name")
     place_type = body.get("place_type")
     if not isinstance(place_name, str) or not 2 <= len(place_name.strip()) <= 200:
-        return _response(400, {"detail": "place_name must contain 2 to 200 characters"})
+        return _response(400, {"detail": "place_name must contain 2 to 200 characters"}, event)
     if not isinstance(place_type, str) or not 1 <= len(place_type.strip()) <= 60:
-        return _response(400, {"detail": "place_type must contain 1 to 60 characters"})
+        return _response(400, {"detail": "place_type must contain 1 to 60 characters"}, event)
 
     try:
         result = location.search_place_index_for_text(
@@ -152,7 +170,7 @@ def lambda_handler(event, _context):
         )
     except (BotoCoreError, ClientError):
         LOGGER.exception("Amazon Location place search failed")
-        return _response(502, {"detail": "Atlas place search is temporarily unavailable"})
+        return _response(502, {"detail": "Atlas place search is temporarily unavailable"}, event)
 
     matches = []
     for candidate in result.get("Results", []):
@@ -189,4 +207,4 @@ def lambda_handler(event, _context):
             "relevance": relevance,
             "place_type": place_type.strip(),
         })
-    return _response(200, {"matches": matches})
+    return _response(200, {"matches": matches}, event)
