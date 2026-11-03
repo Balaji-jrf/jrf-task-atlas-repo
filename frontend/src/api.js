@@ -67,7 +67,22 @@ export async function fetchAtlasFacts(token) {
   await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
     while (queue.length) await queue.shift()();
   }));
-  return { documents, facts, failures };
+  const documentsById = new Map(
+    documents.map((document) => [document.document_id, document]),
+  );
+  const factsWithDocumentMetadata = facts.map((fact) => {
+    const document = documentsById.get(fact.document_id);
+    if (!document) return fact;
+    return {
+      ...fact,
+      filename: fact.filename
+        || document.doc_name
+        || document.document_name
+        || document.filename,
+      doc_tag: fact.doc_tag || document.doc_tag || '',
+    };
+  });
+  return { documents, facts: factsWithDocumentMetadata, failures };
 }
 
 export async function fetchDocumentLink(documentId, token) {

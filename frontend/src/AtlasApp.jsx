@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AtlasMap from './AtlasMap.jsx';
 import { fetchAtlasFacts, fetchDocumentLink, geocodePlace, saveRecordGeotags } from './api.js';
+import { FACTS_PER_PAGE, filterFactsByCategory, paginate } from './browseFilters.js';
 import { confirmedPlaces, placeCandidates } from './locationData.js';
 
 function getParentOrigin() {
@@ -41,6 +42,8 @@ export default function AtlasApp() {
   const [selectedFact, setSelectedFact] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [browseMode, setBrowseMode] = useState('facts');
+  const [documentCategory, setDocumentCategory] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [matches, setMatches] = useState([]);
   const [geocoding, setGeocoding] = useState(false);
   const [documentUrl, setDocumentUrl] = useState('');
@@ -75,6 +78,7 @@ export default function AtlasApp() {
       setFacts(result.facts);
       setFailures(result.failures);
       setSelectedPlace(null);
+      setCurrentPage(1);
     } catch (loadError) {
       setError(loadError.message);
     } finally {
@@ -86,7 +90,11 @@ export default function AtlasApp() {
     loadFacts();
   }, [loadFacts]);
 
-  const places = useMemo(() => confirmedPlaces(facts), [facts]);
+  const categoryFacts = useMemo(
+    () => filterFactsByCategory(facts, documentCategory),
+    [facts, documentCategory],
+  );
+  const places = useMemo(() => confirmedPlaces(categoryFacts), [categoryFacts]);
   const visiblePlaces = useMemo(() => {
     const search = query.trim().toLowerCase();
     if (!search) return places;
@@ -97,13 +105,18 @@ export default function AtlasApp() {
   }, [places, query]);
   const visibleFacts = useMemo(() => {
     const search = query.trim().toLowerCase();
-    if (!search) return facts;
-    return facts.filter((fact) => (
+    if (!search) return categoryFacts;
+    return categoryFacts.filter((fact) => (
       factSummary(fact).toLowerCase().includes(search)
       || (fact.filename || fact.document_id || '').toLowerCase().includes(search)
       || (fact.theme || '').toLowerCase().includes(search)
     ));
-  }, [facts, query]);
+  }, [categoryFacts, query]);
+  const visibleItems = browseMode === 'facts' ? visibleFacts : visiblePlaces;
+  const page = useMemo(
+    () => paginate(visibleItems, currentPage, FACTS_PER_PAGE),
+    [visibleItems, currentPage],
+  );
   const candidates = useMemo(
     () => selectedFact ? placeCandidates(selectedFact) : [],
     [selectedFact],
@@ -285,17 +298,41 @@ export default function AtlasApp() {
               <p className="section-kicker">Browse</p>
               <h2>{browseMode === 'facts' ? 'Approved facts' : 'Places'}</h2>
             </div>
-            <span className="atlas-count">{browseMode === 'facts' ? visibleFacts.length : visiblePlaces.length}</span>
+            <span className="atlas-count">{visibleItems.length}</span>
           </div>
           <div className="atlas-browse-switch" role="group" aria-label="Browse facts or places">
-            <button type="button" className={browseMode === 'facts' ? 'active' : ''} onClick={() => setBrowseMode('facts')}>Facts</button>
-            <button type="button" className={browseMode === 'places' ? 'active' : ''} onClick={() => setBrowseMode('places')}>Places</button>
+            <button type="button" className={browseMode === 'facts' ? 'active' : ''} onClick={() => { setBrowseMode('facts'); setCurrentPage(1); }}>Facts</button>
+            <button type="button" className={browseMode === 'places' ? 'active' : ''} onClick={() => { setBrowseMode('places'); setCurrentPage(1); }}>Places</button>
           </div>
+          {browseMode === 'facts' && (
+            <label className="atlas-filter-label">
+              Document type
+              <select
+                className="atlas-filter"
+                value={documentCategory}
+                aria-label="Filter facts by document type"
+                onChange={(event) => {
+                  setDocumentCategory(event.target.value);
+                  setCurrentPage(1);
+                  setSelectedFact(null);
+                  setSelectedPlace(null);
+                  setSelectedCandidate(null);
+                  setMatches([]);
+                  setDocumentUrl('');
+                }}
+              >
+                <option value="all">All documents ({facts.length})</option>
+                <option value="historical">Historical documents ({filterFactsByCategory(facts, 'historical').length})</option>
+                <option value="policy">Policy documents ({filterFactsByCategory(facts, 'policy').length})</option>
+                <option value="other">Other ({filterFactsByCategory(facts, 'other').length})</option>
+              </select>
+            </label>
+          )}
           <input
             className="atlas-search"
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }}
             placeholder={browseMode === 'facts' ? 'Search facts or documents…' : 'Search places or facts…'}
             aria-label="Search places or facts"
           />
@@ -309,7 +346,7 @@ export default function AtlasApp() {
             {!loading && browseMode === 'facts' && !visibleFacts.length && (
               <p className="atlas-empty">No approved facts found for this search.</p>
             )}
-            {!loading && browseMode === 'facts' && visibleFacts.map((fact) => (
+            {!loading && browseMode === 'facts' && page.items.map((fact) => (
               <button
                 type="button"
                 key={`${fact.document_id}:${fact.theme_entity_id}`}
@@ -326,7 +363,7 @@ export default function AtlasApp() {
             {!loading && browseMode === 'places' && !visiblePlaces.length && (
               <p className="atlas-empty">No confirmed locations yet. Select an approved fact in Facts to geocode and review its places.</p>
             )}
-            {!loading && browseMode === 'places' && visiblePlaces.map((place) => (
+            {!loading && browseMode === 'places' && page.items.map((place) => (
               <button
                 type="button"
                 key={place.key}
@@ -341,6 +378,28 @@ export default function AtlasApp() {
               </button>
             ))}
           </div>
+          <nav className="atlas-pagination" aria-label={`${browseMode === 'facts' ? 'Facts' : 'Places'} pagination`}>
+            <span>Showing {page.start}–{page.end} of {visibleItems.length}</span>
+            <div>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}
+                disabled={page.page <= 1 || loading}
+                aria-label="Previous page"
+              >
+                Previous
+              </button>
+              <span>Page {page.page} of {page.pageCount}</span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((value) => Math.min(page.pageCount, value + 1))}
+                disabled={page.page >= page.pageCount || loading}
+                aria-label="Next page"
+              >
+                Next
+              </button>
+            </div>
+          </nav>
           <div className="atlas-layer-note">
             <span>Current layer</span><strong>Historical records</strong>
             <small>IMD, LST and satellite layers are planned extensions.</small>

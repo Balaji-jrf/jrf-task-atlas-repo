@@ -37,10 +37,18 @@ button { cursor: pointer; }
 .atlas-browse-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-top: 12px; padding: 3px; border-radius: 5px; background: #f1f1e9; }
 .atlas-browse-switch button { padding: 7px; border: 0; border-radius: 4px; background: transparent; color: #748077; font-size: 9px; }
 .atlas-browse-switch button.active { background: white; color: #315744; box-shadow: 0 1px 3px #253b3014; }
+.atlas-filter-label { display: grid; gap: 5px; margin-top: 12px; color: #7d8a80; font-size: 8px; }
+.atlas-filter { width: 100%; padding: 8px; border: 1px solid #dedfd6; border-radius: 5px; outline: none; background: white; color: #344a3c; font-size: 9px; }
+.atlas-filter:focus { border-color: #63866f; box-shadow: 0 0 0 2px #e4eee5; }
 .atlas-search { width: 100%; margin-top: 16px; padding: 10px; border: 1px solid #dedfd6; border-radius: 5px; outline: none; background: white; font-size: 10px; }
 .atlas-search:focus { border-color: #63866f; box-shadow: 0 0 0 2px #e4eee5; }
 .atlas-panel-help { color: #8b948b; font-size: 9px; line-height: 1.6; }
 .atlas-place-list, .atlas-fact-list { flex: 1; overflow: auto; }
+.atlas-pagination { display: grid; gap: 7px; padding: 10px 0 4px; border-top: 1px solid #eeede6; color: #7d8a80; font-size: 8px; }
+.atlas-pagination > span { text-align: center; }
+.atlas-pagination > div { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+.atlas-pagination button { padding: 6px 8px; border: 1px solid #d5d8ce; border-radius: 4px; background: #fffefa; color: #375c49; font-size: 8px; }
+.atlas-pagination button:disabled { opacity: .45; cursor: default; }
 .atlas-place-item { width: 100%; display: flex; gap: 10px; align-items: center; padding: 11px 8px; border: 0; border-bottom: 1px solid #f0efe8; background: transparent; text-align: left; color: inherit; }
 .atlas-place-item:hover, .atlas-place-item.active { background: #f2f5ef; }
 .atlas-place-pin { color: #d46a46; font-size: 21px; }
@@ -120,7 +128,7 @@ button { cursor: pointer; }
   .atlas-header-meta > span:first-child { display: none; }
   .atlas-refresh { padding: 7px; font-size: 8px; }
   .atlas-workspace { display: flex; flex-direction: column; overflow: visible; min-height: 0; }
-  .atlas-place-panel { min-height: 225px; max-height: 32dvh; border-right: 0; }
+  .atlas-place-panel { min-height: 290px; max-height: 42dvh; border-right: 0; }
   .atlas-resize { display: none; }
   .atlas-map-panel { min-height: 48dvh; order: 2; }
   .atlas-place-panel { order: 1; }

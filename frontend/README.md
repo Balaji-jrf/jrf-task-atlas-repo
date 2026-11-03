@@ -19,6 +19,10 @@ only when the parent suppresses that referrer. The production Atlas app is
 `https://main.d1g1u8rtpgjn48.amplifyapp.com`; the parent Archive Lens app embeds that
 origin and contains the Atlas iframe authentication bridge.
 
+The approved-facts browser shows seven results per page. Its document-type filter
+groups tagged documents into Historical documents, Policy documents, and Other
+(including untagged and custom categories).
+
 ## Environment
 
 | Variable | Purpose |
@@ -47,6 +51,7 @@ as its supported engine.
 ```bash
 npm ci
 npm run build
+npm test
 ```
 
 For Amplify, use `frontend` as the application root directory, `npm ci` as the install
