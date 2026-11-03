@@ -23,8 +23,8 @@ authentication bridge.
 
 | Variable | Purpose |
 |---|---|
-| `VITE_DATABASE_API_URL` | Existing BREATHE OCR/retrieval API base URL. |
-| `VITE_ATLAS_API_URL` | Atlas API Gateway base URL for `/api/atlas/geocode`. |
+| `VITE_DATABASE_API_URL` | Existing BREATHE OCR/retrieval API base URL (`https://o0dqnexpsg.execute-api.ap-southeast-2.amazonaws.com/prod`). |
+| `VITE_ATLAS_API_URL` | Atlas API Gateway base URL (`https://iz37e4zn02.execute-api.ap-southeast-2.amazonaws.com`). |
 | `VITE_ATLAS_REGION` | Amazon Location region; default `ap-southeast-2`. |
 | `VITE_ATLAS_MAP_NAME` | Amazon Location map resource name. |
 | `VITE_ATLAS_MAP_API_KEY` | Browser map key. Restrict its allowed origin and map operations. |
@@ -34,6 +34,9 @@ Set these in Amplify's environment configuration for the relevant deployment bra
 Vite embeds `VITE_*` variables in public browser assets. Never place server secrets,
 JWT signing secrets, or AWS credentials in frontend variables. The map API key is
 public by design and must have strict Amazon Location key restrictions.
+The current map key allows only `http://localhost:5173/*`; before production use,
+update it to the exact Amplify origin. The existing OCR API CORS and Atlas API CORS,
+plus the geocoder Lambda's `ALLOWED_ORIGIN`, must also include that origin.
 
 ## Build
 

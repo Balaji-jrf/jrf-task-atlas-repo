@@ -1,15 +1,30 @@
 const DATABASE_API = (import.meta.env.VITE_DATABASE_API_URL || '').replace(/\/$/, '');
 const ATLAS_API = (import.meta.env.VITE_ATLAS_API_URL || '').replace(/\/$/, '');
 
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
 async function request(url, token, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  const method = options.method || 'GET';
+  let retries = 0;
+  let response;
+  while (true) {
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...options.headers,
+        },
+      });
+      break;
+    } catch (error) {
+      if (method !== 'GET' || retries >= 2) throw error;
+      retries += 1;
+      await wait(250 * (2 ** (retries - 1)));
+    }
+  }
+
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.detail || data.message || `Request failed (${response.status})`);

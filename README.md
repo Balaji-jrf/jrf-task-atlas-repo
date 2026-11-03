@@ -4,10 +4,12 @@ The Research Atlas is a standalone React/Vite microfrontend for exploring approv
 historical facts by location. It is designed to be hosted independently (for example
 with AWS Amplify) and embedded in the BREATHE Archive Lens application.
 
-Current scope is deliberately local/source-only. No AWS resources have been created,
-no Lambda has been deployed, and no production records have been changed. The
-geocoding Lambda source and API contract are ready for deployment after environment,
-IAM, API Gateway, and map resources are configured.
+The Atlas backend is deployed in AWS `ap-southeast-2`: its Amazon Location map and
+place index, restricted browser map key, geocoding Lambda, HTTP API, and retrieval
+Lambda geotag validation are provisioned. The frontend is not deployed; Amplify
+publishing is intentionally left to the repository owner. The browser map key is
+currently restricted to local development and must be updated with the final Amplify
+origin before the deployed map can load.
 
 ## Architecture
 
@@ -94,6 +96,20 @@ browser map key to the deployed Atlas origin and map-only operations. Configure 
 Lambda with the protected shared `JWT_SECRET`, current users-table read access, the
 place index name, and the exact Atlas CORS origin.
 
-This repository contains source and configuration examples only. Creating AWS
-resources, deploying Lambda/API, and publishing Amplify are intentionally separate
-steps and have not been performed.
+Provisioned resources (region `ap-southeast-2`):
+
+| Resource | Name / URL |
+|---|---|
+| Amazon Location map | `jrf-task-atlas-map` (`VectorEsriStreets`) |
+| Amazon Location place index | `jrf-task-atlas-place-index` (Esri, storage intended use) |
+| Map key | `jrf-task-atlas-browser-key`, map-only and localhost-referrer restricted |
+| Geocoder Lambda | `jrf-task-atlas-geocode` (`lambda_geocode.lambda_handler`) |
+| HTTP API | `jrf-task-atlas-api` — `https://iz37e4zn02.execute-api.ap-southeast-2.amazonaws.com` |
+| Existing OCR API CORS | Local Atlas origin added; production stage deployed |
+| Existing retrieval Lambda | `jrf-task-ocr-retrieval` updated with permission-gated `geotag` validation |
+
+Amazon Location searches and map requests use request-based pricing. Check the AWS
+console for current usage and pricing. No records have been geotagged by deployment;
+place data is written only after an authenticated researcher confirms a candidate.
+The final Amplify origin must be added to the map-key referrers, Atlas API CORS,
+existing OCR API CORS, and geocoder Lambda `ALLOWED_ORIGIN`.

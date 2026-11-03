@@ -26,7 +26,6 @@ class GeocodeHandlerTests(unittest.TestCase):
     def test_returns_candidates_without_writing_them(self):
         result = {
             "Results": [{
-                "PlaceId": "place-1",
                 "Relevance": 0.94,
                 "Place": {
                     "Label": "Bidar, Karnataka, India",
@@ -54,14 +53,17 @@ class GeocodeHandlerTests(unittest.TestCase):
             }, None)
 
         self.assertEqual(response["statusCode"], 200)
-        self.assertEqual(json.loads(response["body"])["matches"], [{
-            "place_id": "place-1",
+        matches = json.loads(response["body"])["matches"]
+        self.assertEqual(len(matches), 1)
+        self.assertRegex(matches[0]["place_id"], r"^esri:[a-f0-9]{24}$")
+        self.assertEqual(matches[0], {
+            "place_id": matches[0]["place_id"],
             "label": "Bidar, Karnataka, India",
             "longitude": 77.5,
             "latitude": 17.9,
             "relevance": 0.94,
             "place_type": "district",
-        }])
+        })
         search.assert_called_once_with(
             IndexName="jrf-task-atlas-place-index",
             Text="Bidar, Karnataka, India",

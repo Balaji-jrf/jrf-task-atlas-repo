@@ -162,8 +162,7 @@ def lambda_handler(event, _context):
         label = place.get("Label")
         relevance = candidate.get("Relevance")
         if (
-            not isinstance(place_id, str)
-            or not place_id
+            (place_id is not None and (not isinstance(place_id, str) or not place_id))
             or not isinstance(label, str)
             or not label
             or not isinstance(point, list)
@@ -179,6 +178,9 @@ def lambda_handler(event, _context):
             or not 0 <= relevance <= 1
         ):
             continue
+        if not place_id:
+            identity = f"{label}|{point[0]:.7f}|{point[1]:.7f}".encode("utf-8")
+            place_id = f"esri:{hashlib.sha256(identity).hexdigest()[:24]}"
         matches.append({
             "place_id": place_id,
             "label": label,

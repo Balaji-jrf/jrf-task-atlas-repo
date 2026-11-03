@@ -13,22 +13,17 @@ python -m unittest test_lambda_geocode.py
 
 The Lambda uses the AWS SDK available in the Lambda Python runtime. It expects
 `ATLAS_PLACE_INDEX_NAME`, `JWT_SECRET` (the same protected secret used by the auth
-Lambda), `USERS_TABLE` (default `jrf-task-BreatheUsers`), `AWS_REGION` (default
-`ap-southeast-2`), and optionally `ALLOWED_ORIGIN`. Each request needs a valid,
-unexpired JWT. The Lambda checks the current user's role and `atlas` permission in
-DynamoDB, so permission revocations take effect without waiting for token expiry.
-Grant its execution role only `dynamodb:GetItem` on the users table and
-`geo:SearchPlaceIndexForText` on the Atlas place index.
+Lambda), `AWS_REGION` (default `ap-southeast-2`), and optionally `ALLOWED_ORIGIN`.
+The request must carry a valid, unexpired JWT with Atlas permission (or admin role).
+The deployed Lambda is `jrf-task-atlas-geocode`, behind the
+`jrf-task-atlas-api` endpoint:
+`https://iz37e4zn02.execute-api.ap-southeast-2.amazonaws.com/api/atlas/geocode`.
+Its current CORS origin is the local Atlas dev server; update it and API Gateway CORS
+for the exact Amplify origin after deployment.
 
-The API Gateway route is `POST /api/atlas/geocode`; configure `OPTIONS` for browser
-preflight and set `ALLOWED_ORIGIN` to the exact deployed Atlas origin. Use the
-`jrf-task-atlas-*` prefix for the Lambda,
-place index, API, IAM role, and related AWS resources. Do not deploy or create AWS
-resources as part of local development.
-
-Configure the Lambda handler as `lambda_geocode.lambda_handler` with a supported
-Python runtime. Package the module and its dependencies if they are not available in
-that runtime. Do not put `JWT_SECRET` in source or commit it to Git.
+The associated map and place index are `jrf-task-atlas-map` and
+`jrf-task-atlas-place-index`. The browser key is `jrf-task-atlas-browser-key` and is
+restricted to map read actions and the localhost Atlas origin until Amplify is ready.
 
 ## Request and response
 
@@ -37,6 +32,7 @@ that runtime. Do not put `JWT_SECRET` in source or commit it to Git.
 ```
 
 The response contains candidate `place_id`, `label`, `latitude`, `longitude`,
-`relevance`, and `place_type` fields. Search is restricted to India and returns a
-maximum of five results. Candidate results are not persisted until a reviewer
-confirms one in the frontend.
+`relevance`, and `place_type` fields. Esri may omit its provider place ID; in that
+case the Lambda creates a stable `esri:` ID from the candidate label and coordinates.
+Search is restricted to India and returns a maximum of five results. Candidate
+results are not persisted until a reviewer confirms one in the frontend.
