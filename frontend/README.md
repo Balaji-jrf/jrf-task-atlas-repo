@@ -37,6 +37,10 @@ public by design and must have strict Amazon Location key restrictions.
 
 ## Build
 
+Use Node.js 22 for local production builds and Amplify. The app builds on older
+Node versions in local checks, but a transitive MapLibre dependency declares Node 22
+as its supported engine.
+
 ```bash
 npm ci
 npm run build
