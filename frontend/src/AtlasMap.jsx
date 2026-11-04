@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import Map from 'ol/Map.js';
+import View from 'ol/View.js';
+import Overlay from 'ol/Overlay.js';
+import { defaults as defaultControls } from 'ol/control/defaults.js';
+import { fromLonLat } from 'ol/proj.js';
+import { apply } from 'ol-mapbox-style';
+import 'ol/ol.css';
 
 const region = import.meta.env.VITE_ATLAS_REGION || 'ap-southeast-2';
 const mapName = import.meta.env.VITE_ATLAS_MAP_NAME || '';
@@ -9,77 +15,103 @@ function mapStyleUrl() {
   return `https://maps.geo.${region}.amazonaws.com/maps/v0/maps/${encodeURIComponent(mapName)}/style-descriptor`;
 }
 
+function withMapKey(url) {
+  const requestUrl = new URL(url);
+  if (requestUrl.hostname === `maps.geo.${region}.amazonaws.com`) {
+    requestUrl.searchParams.set('key', mapApiKey);
+  }
+  return requestUrl.toString();
+}
+
 export default function AtlasMap({ places, selectedPlace, onSelectPlace }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
-  const maplibreRef = useRef(null);
-  const markersRef = useRef([]);
+  const overlaysRef = useRef([]);
   const [mapError, setMapError] = useState('');
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || !mapName || !mapApiKey) return undefined;
     let cancelled = false;
-    let map;
-    import('maplibre-gl').then(({ default: maplibregl }) => {
-      if (cancelled || !containerRef.current) return;
-      maplibreRef.current = maplibregl;
-      map = new maplibregl.Map({
-        container: containerRef.current,
-        style: mapStyleUrl(),
-        center: [78.9629, 20.5937],
+    const map = new Map({
+      target: containerRef.current,
+      layers: [],
+      view: new View({
+        center: fromLonLat([78.9629, 20.5937]),
         zoom: 4,
-        attributionControl: true,
-        transformRequest: (url) => {
-          if (!url.startsWith(`https://maps.geo.${region}.amazonaws.com/`)) {
-            return { url };
-          }
-          const requestUrl = new URL(url);
-          requestUrl.searchParams.set('key', mapApiKey);
-          return { url: requestUrl.toString() };
-        },
-      });
-      map.addControl(new maplibregl.NavigationControl(), 'top-right');
-      map.on('error', ({ error }) => {
-        const status = error?.status;
-        setMapError(status
-          ? `Map tiles could not be loaded (HTTP ${status}). Check the map key and allowed origins.`
-          : 'Map tiles could not be loaded. Check the map key and allowed origins.');
-      });
-      mapRef.current = map;
-      setMapReady(true);
-    }).catch((error) => {
-      if (!cancelled) {
-        setMapError(error instanceof Error
-          ? `The map viewer could not be loaded: ${error.message}`
-          : 'The map viewer could not be loaded because MapLibre failed to load.');
-      }
+        minZoom: 2,
+        maxZoom: 18,
+      }),
+      controls: defaultControls({ attribution: true, zoom: true, rotate: false }),
     });
+    const resizeObserver = new ResizeObserver(() => map.updateSize());
+
+    mapRef.current = map;
+    setMapError('');
+    setMapReady(false);
+    resizeObserver.observe(containerRef.current);
+
+    const styleUrl = withMapKey(mapStyleUrl());
+    fetch(styleUrl)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Amazon Location style request failed (${response.status}). Check the map name and browser-key permissions.`);
+        }
+        return response.json();
+      })
+      .then((style) => apply(map, style, {
+        styleUrl,
+        transformRequest: (url) => withMapKey(url),
+      }))
+      .then(() => {
+        if (!cancelled) {
+          map.getAllLayers().forEach((layer) => {
+            layer.getSource()?.on('tileloaderror', () => {
+              if (!cancelled) {
+                setMapError('Amazon Location could not load one or more map tiles. Check browser-key permissions, allowed origin, and network access.');
+              }
+            });
+          });
+          map.updateSize();
+          setMapReady(true);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setMapError(error?.message || 'Amazon Location map style could not be loaded.');
+        }
+      });
+
     return () => {
       cancelled = true;
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
-      map?.remove();
+      resizeObserver.disconnect();
+      overlaysRef.current.forEach((overlay) => map.removeOverlay(overlay));
+      overlaysRef.current = [];
+      map.setTarget(undefined);
       mapRef.current = null;
-      maplibreRef.current = null;
     };
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
-    const maplibregl = maplibreRef.current;
-    if (!mapReady || !map || !maplibregl) return;
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = places.map((place) => {
+    if (!mapReady || !map) return;
+    overlaysRef.current.forEach((overlay) => map.removeOverlay(overlay));
+    overlaysRef.current = places.map((place) => {
       const markerElement = document.createElement('button');
       markerElement.className = `atlas-map-marker${selectedPlace?.key === place.key ? ' is-selected' : ''}`;
       markerElement.type = 'button';
       markerElement.setAttribute('aria-label', place.place_name);
       markerElement.title = place.place_name;
       markerElement.addEventListener('click', () => onSelectPlace(place));
-      return new maplibregl.Marker({ element: markerElement })
-        .setLngLat([place.longitude, place.latitude])
-        .addTo(map);
+
+      const overlay = new Overlay({
+        element: markerElement,
+        position: fromLonLat([place.longitude, place.latitude]),
+        positioning: 'center-center',
+        stopEvent: true,
+      });
+      map.addOverlay(overlay);
+      return overlay;
     });
   }, [mapReady, places, selectedPlace, onSelectPlace]);
 
@@ -99,7 +131,7 @@ export default function AtlasMap({ places, selectedPlace, onSelectPlace }) {
   return (
     <div className="atlas-map-wrap">
       <div className="atlas-map" ref={containerRef} />
-      {mapError && <p className="atlas-map-error" role="status">Map service: {mapError}</p>}
+      {mapError && <p className="atlas-map-error" role="alert">Map service: {mapError}</p>}
       {!places.length && (
         <div className="atlas-map-empty">Confirmed geotags will appear here as you review locations.</div>
       )}

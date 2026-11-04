@@ -24,6 +24,12 @@ button { cursor: pointer; }
 .atlas-approved i, .atlas-map-legend i { width: 8px; height: 8px; border-radius: 50%; background: #528469; }
 .atlas-refresh, .atlas-source-link { border: 1px solid #d5d8ce; border-radius: 5px; background: #fffefa; color: #284c3e; padding: 8px 11px; font-size: 10px; text-decoration: none; }
 .atlas-refresh:disabled { opacity: .6; cursor: wait; }
+.atlas-source-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.atlas-source-close { background: #fdf6f2; }
+.atlas-source-viewer { margin: 8px 0 14px; border: 1px solid #dfe5de; border-radius: 8px; overflow: hidden; background: #fff; }
+.atlas-source-viewer-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #eef2eb; color: #315744; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+.atlas-viewer-close { border: 0; background: transparent; color: #315744; font-size: 14px; cursor: pointer; }
+.atlas-source-frame { display: block; width: 100%; min-height: 320px; border: 0; background: #f7f6f1; }
 .atlas-banner { margin: 0 0 8px; padding: 9px 12px; border-radius: 5px; background: #e8efe7; color: #315b43; font-size: 10px; }
 .atlas-error { background: #fae9e4; color: #8d3926; }
 
@@ -65,7 +71,10 @@ button { cursor: pointer; }
 .atlas-resize:hover, .atlas-resize:focus { background: #e8ede5; outline: none; }
 .atlas-map-panel { position: relative; min-width: 0; display: flex; flex-direction: column; background: #edf0e9; }
 .atlas-map-toolbar { height: 39px; display: flex; justify-content: space-between; align-items: center; padding: 0 13px; border-bottom: 1px solid #e0e2d9; background: #fffefa; color: #63746a; font-size: 9px; }
-.atlas-map-wrap, .atlas-map, .atlas-map-placeholder { position: relative; width: 100%; min-height: 0; flex: 1; }
+.atlas-map-wrap, .atlas-map-placeholder { position: relative; width: 100%; min-height: 0; flex: 1; }
+.atlas-map { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; }
+.atlas-map .ol-zoom { top: 8px; right: 8px; left: auto; }
+.atlas-map .ol-attribution { right: 8px; bottom: 8px; font: 8px 'DM Mono', monospace; }
 .atlas-map-placeholder { overflow: hidden; display: grid; place-items: center; background: #edf0e8; }
 .map-placeholder-grid { position: absolute; inset: 0; opacity: .42; background-image: linear-gradient(30deg, transparent 49.5%, #cbd6c7 50%, transparent 50.5%), linear-gradient(150deg, transparent 49.5%, #cbd6c7 50%, transparent 50.5%); background-size: 80px 60px; }
 .map-placeholder-message { position: relative; z-index: 1; max-width: 350px; padding: 22px; border: 1px solid #d8ded3; border-radius: 8px; background: rgba(255,254,250,.92); text-align: center; }
@@ -73,9 +82,10 @@ button { cursor: pointer; }
 .map-placeholder-message p { color: #718076; font-size: 9px; line-height: 1.7; }
 .atlas-map-legend { position: absolute; right: 12px; bottom: 12px; z-index: 3; display: flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid #e1e1d8; border-radius: 4px; background: #fffefa; color: #69766c; font-size: 8px; }
 .atlas-map-empty { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); padding: 9px 12px; border-radius: 4px; background: #fffefa; color: #758178; font-size: 9px; }
-.atlas-map-error { position: absolute; z-index: 2; bottom: 8px; left: 8px; max-width: 80%; padding: 7px; background: #fff0ec; color: #883b2a; font-size: 8px; }
-.atlas-map-marker { width: 17px; height: 17px; border: 2px solid white; border-radius: 50%; background: #d46a46; box-shadow: 0 1px 5px #24372f80; }
-.atlas-map-marker.is-selected { width: 22px; height: 22px; border-color: #183a30; background: #e99254; }
+.atlas-map-error { position: absolute; z-index: 1000; bottom: 8px; left: 8px; max-width: min(440px, calc(100% - 16px)); padding: 9px 11px; border: 1px solid #efc7b9; border-radius: 5px; background: #fff0ec; color: #883b2a; font-size: 9px; line-height: 1.5; }
+.atlas-map-marker { display: block; width: 18px; height: 18px; padding: 0; border: 2px solid white; border-radius: 50%; background: #d46a46; box-shadow: 0 1px 5px #24372f80; }
+.atlas-map-marker.is-selected { width: 22px; height: 22px; margin: -2px; border-color: #183a30; background: #e99254; }
+.atlas-map-marker:focus-visible { outline: 2px solid #183a30; outline-offset: 3px; }
 
 .atlas-detail-panel { overflow: auto; }
 .atlas-coordinate { margin: 13px 0 4px; color: #375c49; font-size: 10px; }

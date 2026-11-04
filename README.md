@@ -36,7 +36,7 @@ geotag writes.
 
 | Path | Purpose |
 |---|---|
-| `frontend/` | Standalone, responsive React/Vite Atlas app and MapLibre map viewer. |
+| `frontend/` | Standalone, responsive React/Vite Atlas app and OpenLayers Canvas map viewer. |
 | `backend/lambda_geocode.py` | Protected candidate-only Amazon Location text geocoder. |
 | `backend/test_lambda_geocode.py` | Geocoder unit tests. |
 | `backend/README.md` | Lambda contract and deployment requirements. |

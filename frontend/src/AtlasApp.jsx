@@ -444,8 +444,26 @@ export default function AtlasApp() {
               </div>
               <p className="atlas-selected-fact">{factSummary(selectedFact)}</p>
               <p className="atlas-source-name">{selectedFact.filename || selectedFact.document_id}</p>
-              <button className="atlas-source-link" type="button" onClick={openSource}>Load source PDF</button>
-              {documentUrl && <a className="atlas-source-link" href={documentUrl} target="_blank" rel="noreferrer">Open source PDF · p.{selectedFact.pdf_page_num || 1} ↗</a>}
+              <div className="atlas-source-actions">
+                <button className="atlas-source-link" type="button" onClick={openSource}>Load source PDF</button>
+                {documentUrl && (
+                  <button className="atlas-source-link atlas-source-close" type="button" onClick={() => setDocumentUrl('')}>Close viewer</button>
+                )}
+              </div>
+              {documentUrl && (
+                <div className="atlas-source-viewer">
+                  <div className="atlas-source-viewer-header">
+                    <span>Source document · p.{selectedFact.pdf_page_num || 1}</span>
+                    <button type="button" className="atlas-viewer-close" onClick={() => setDocumentUrl('')} aria-label="Close PDF viewer">✕</button>
+                  </div>
+                  <iframe
+                    title={`Source PDF for ${selectedFact.filename || selectedFact.document_id}`}
+                    src={documentUrl}
+                    className="atlas-source-frame"
+                    loading="lazy"
+                  />
+                </div>
+              )}
               <h3 className="atlas-section-title">Places in this fact</h3>
               {!candidates.length && <p className="atlas-empty">This fact has no structured place values to geocode yet.</p>}
               {candidates.map((candidate) => (

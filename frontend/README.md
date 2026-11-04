@@ -44,9 +44,9 @@ The map key and backend CORS allow the local origin and the deployed Atlas origi
 
 ## Build
 
-Use Node.js 22 for local production builds and Amplify. The app builds on older
-Node versions in local checks, but a transitive MapLibre dependency declares Node 22
-as its supported engine.
+The map uses OpenLayers' Canvas renderer with the existing Amazon Location vector
+style and tiles. This avoids a WebGL2 browser requirement while retaining interactive
+pan, zoom, and place markers.
 
 ```bash
 npm ci
